@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MiniStory Code Studio</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1020;--panel:#131b30;--line:#293653;--text:#f3f6ff;--muted:#a7b3cc;--accent:#8b9cff}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#182342 0,#0b1020 55%);font-family:system-ui,-apple-system,sans-serif;color:var(--text);padding:18px;max-width:900px;margin:auto}
+h1{font-size:clamp(25px,5vw,38px);margin:8px 0}p{color:var(--muted);line-height:1.5}.tag{display:inline-block;border:1px solid #39476a;border-radius:999px;padding:5px 10px;color:#c8d1ff;font-size:12px}
+.panel{background:#131b30;border:1px solid var(--line);border-radius:18px;padding:16px;margin:14px 0}
+label{display:block;font-weight:650;margin-bottom:8px}textarea{width:100%;min-height:82px;resize:vertical;background:#0b1224;border:1px solid #354463;color:white;border-radius:12px;padding:12px;font:inherit}
+button{border:0;border-radius:12px;padding:12px 15px;font:600 15px system-ui;cursor:pointer;background:#8b9cff;color:#0b1020}
+button.secondary{background:#25324f;color:#f3f6ff;border:1px solid #3b4a6c}button:disabled{opacity:.5;cursor:wait}.buttons{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}
+canvas{display:block;width:100%;height:auto;aspect-ratio:16/9;background:#10182b;border-radius:14px;border:1px solid #354463}
+.status{font-size:13px;color:#b9c6e2;min-height:22px;margin-top:10px}.small{font-size:12px}.scene-list{display:flex;gap:8px;flex-wrap:wrap}.scene{background:#202c47;border-radius:9px;padding:8px 10px;font-size:12px;color:#dce3ff}
+a{color:#bfcaff}footer{font-size:12px;color:#91a0be;line-height:1.5}
+</style>
+</head>
+<body>
+<span class="tag">PROTOTIPO · 2D · BETA</span>
+<h1>MiniStory Code Studio</h1>
+<p>Escribe una idea, genera una minihistoria animada y grábala como vídeo desde el navegador. Esta primera versión usa una historia de demostración y todavía no conecta una IA externa.</p>
+<div class="panel">
+<label for="idea">¿Qué historia quieres contar?</label>
+<textarea id="idea" maxlength="180" placeholder="Ej.: Un pequeño robot encuentra una semilla y hace crecer un árbol.">Un pequeño robot encuentra una semilla y hace crecer un árbol.</textarea>
+<div class="buttons">
+<button id="generate">Crear escenas</button>
+<button class="secondary" id="play">Reproducir</button>
+<button class="secondary" id="record">Exportar vídeo</button>
+</div>
+<div class="status" id="status" role="status">Listo. Pulsa “Crear escenas”.</div>
+<div class="scene-list" id="sceneList"></div>
+</div>
+<div class="panel">
+<canvas id="screen" width="960" height="540" aria-label="Vista previa de la animación"></canvas>
+<p class="small">Formato de vista previa: 16:9. La exportación graba la animación en tiempo real; mantén esta pestaña abierta mientras termina.</p>
+</div>
+<div class="panel">
+<strong>Qué incluye esta versión</strong>
+<p>✓ Animación dibujada por código · ✓ Tres escenas · ✓ Texto adaptado a tu idea · ✓ Grabación del lienzo si el navegador lo admite.</p>
+<p>Para convertir cualquier idea en dibujos realmente distintos, el siguiente paso es conectar un modelo de IA que escriba una descripción estructurada de cada escena. No pegues claves secretas de API en este archivo público.</p>
+</div>
+<footer>Consejo para iPad: abre este archivo desde una web HTTPS para probar la grabación. El navegador decide qué formato puede exportar (MP4 o WebM); si MP4 no está disponible, la aplicación te lo indicará.</footer>
+<script>
+const canvas=document.getElementById('screen'),ctx=canvas.getContext('2d');
+const idea=document.getElementById('idea'),statusEl=document.getElementById('status'),sceneList=document.getElementById('sceneList');
+const W=canvas.width,H=canvas.height;
+let playing=false,raf=0,startTime=0,storyText='Un pequeño robot encuentra una semilla y hace crecer un árbol.';
+const sceneNames=['El descubrimiento','La idea cobra vida','Un nuevo comienzo'];
+function rounded(x,y,w,h,r,fill){ctx.fillStyle=fill;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill()}
+function text(str,x,y,size,color='#fff',align='center',weight='600'){ctx.fillStyle=color;ctx.font=`${weight} ${size}px system-ui, sans-serif`;ctx.textAlign=align;ctx.fillText(str,x,y)}
+function wrap(str,maxChars){let words=str.split(/\s+/),lines=[],line='';for(const word of words){if((line+' '+word).trim().length>maxChars&&line){lines.push(line);line=word}else line=(line+' '+word).trim()}if(line)lines.push(line);return lines.slice(0,2)}
+function drawScene(scene,t){
+ const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,scene===2?'#132b3a':'#101b38');g.addColorStop(1,scene===2?'#315b4d':'#503e70');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+ // Stars / soft dots
+ for(let i=0;i<55;i++){let x=(i*173+35)%W,y=(i*89+22)%300;ctx.globalAlpha=.18+(i%4)*.1;ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x,y,1.5+(i%3),0,Math.PI*2);ctx.fill()}ctx.globalAlpha=1;
+ // ground
+ ctx.fillStyle=scene===2?'#244b3e':'#252c4b';ctx.beginPath();ctx.ellipse(480,490,500,105,0,0,Math.PI*2);ctx.fill();
+ // scene progress animation
+ const bob=Math.sin(t*3)*5;
+ if(scene===0){
+   // small robot
+   rounded(300,285+bob,145,140,24,'#9daeff');rounded(320,310+bob,105,72,15,'#eaf0ff');
+   ctx.fillStyle='#18233f';ctx.beginPath();ctx.arc(350,340+bob,9,0,Math.PI*2);ctx.arc(395,340+bob,9,0,Math.PI*2);ctx.fill();
+   ctx.strokeStyle='#d8e0ff';ctx.lineWidth=8;ctx.beginPath();ctx.moveTo(370,285+bob);ctx.lineTo(370,260+bob);ctx.stroke();ctx.fillStyle='#ffdb7b';ctx.beginPath();ctx.arc(370,253+bob,12,0,Math.PI*2);ctx.fill();
+   // seed
+   const sx=560,sy=430-Math.min(1,t/2)*50;ctx.fillStyle='#d8a56b';ctx.beginPath();ctx.ellipse(sx,sy,12,18,.5,0,Math.PI*2);ctx.fill();
+   text('¿QUÉ ES ESO?',480,205,28,'#fff');
+ }else if(scene===1){
+   // sprout emerging
+   rounded(300,285+bob,145,140,24,'#9daeff');rounded(320,310+bob,105,72,15,'#eaf0ff');ctx.fillStyle='#18233f';ctx.beginPath();ctx.arc(350,340+bob,9,0,Math.PI*2);ctx.arc(395,340+bob,9,0,Math.PI*2);ctx.fill();
+   ctx.strokeStyle='#75db9a';ctx.lineWidth=12;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(560,455);ctx.lineTo(560,370-Math.min(1,t/2)*30);ctx.stroke();
+   ctx.fillStyle='#64d68c';ctx.beginPath();ctx.ellipse(535,385,27,13,-.5,0,Math.PI*2);ctx.ellipse(583,365,27,13,.5,0,Math.PI*2);ctx.fill();
+   text('UNA PEQUEÑA SEMILLA',480,205,26,'#fff');
+ }else{
+   // tree
+   ctx.strokeStyle='#b77b55';ctx.lineWidth=30;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(560,470);ctx.lineTo(560,325);ctx.stroke();
+   ctx.lineWidth=17;ctx.beginPath();ctx.moveTo(560,380);ctx.lineTo(510,330);ctx.moveTo(560,365);ctx.lineTo(610,315);ctx.stroke();
+   for(const [x,y,r] of [[530,300,55],[585,285,63],[485,335,39],[625,340,43],[560,245,49]]){ctx.fillStyle='#48b978';ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()}
+   rounded(300,285+bob,145,140,24,'#9daeff');rounded(320,310+bob,105,72,15,'#eaf0ff');ctx.fillStyle='#18233f';ctx.beginPath();ctx.arc(350,340+bob,9,0,Math.PI*2);ctx.arc(395,340+bob,9,0,Math.PI*2);ctx.fill();
+   text('TODO EMPIEZA CON ALGO PEQUEÑO',480,175,24,'#fff');
+ }
+ // captions
+ rounded(45,35,870,92,18,'rgba(7,12,28,.72)');
+ const lines=wrap(storyText,65);text('MINIHISTORIA · ESCENA '+(scene+1),75,65,16,'#aebdff','left','700');
+ lines.forEach((line,i)=>text(line,75,95+i*25,21,'#fff','left','600'));
+ rounded(45,500,870,5,3,'rgba(255,255,255,.18)');rounded(45,500,870*((scene+t/4)/3),5,3,'#aebdff');
+}
+function renderAt(ms){const total=9000,sec=(ms%total)/1000,scene=Math.min(2,Math.floor(sec/3)),local=sec%3;drawScene(scene,local)}
+function stop(){playing=false;cancelAnimationFrame(raf)}
+function tick(now){if(!playing)return;renderAt(now-startTime);raf=requestAnimationFrame(tick)}
+function start(){stop();playing=true;startTime=performance.now();raf=requestAnimationFrame(tick)}
+function build(){storyText=(idea.value.trim()||'Una pequeña aventura empieza hoy.').replace(/[<>]/g,'');sceneList.innerHTML='';sceneNames.forEach((n,i)=>{const el=document.createElement('span');el.className='scene';el.textContent=`${i+1}. ${n}`;sceneList.appendChild(el)});drawScene(0,0);statusEl.textContent='Escenas preparadas. Reproduce la vista previa o exporta el vídeo.'}
+document.getElementById('generate').addEventListener('click',build);
+document.getElementById('play').addEventListener('click',()=>{build();start();statusEl.textContent='Reproduciendo la minihistoria (9 segundos).';setTimeout(()=>{stop();drawScene(2,2);statusEl.textContent='Reproducción terminada.'},9000)});
+document.getElementById('record').addEventListener('click',async()=>{
+ stop();build();
+ if(!canvas.captureStream||!window.MediaRecorder){statusEl.textContent='Este navegador no permite grabar el lienzo. Prueba Safari actualizado o un navegador compatible.';return}
+ let mime='';for(const type of ['video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm']){try{if(MediaRecorder.isTypeSupported(type)){mime=type;break}}catch(e){}}
+ if(!mime){statusEl.textContent='No se detecta un formato de vídeo compatible en este navegador.';return}
+ try{
+  const stream=canvas.captureStream(30),chunks=[],recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:4000000});
+  recorder.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
+  recorder.onerror=()=>{statusEl.textContent='Error al grabar. Prueba otra vez o utiliza un navegador actualizado.'};
+  recorder.onstop=()=>{
+   const blob=new Blob(chunks,{type:mime}),url=URL.createObjectURL(blob),a=document.createElement('a');
+   a.href=url;a.download='minihistoria.'+(mime.includes('mp4')?'mp4':'webm');document.body.appendChild(a);a.click();a.remove();
+   statusEl.textContent='Vídeo listo. Formato exportado: '+(mime.includes('mp4')?'MP4':'WebM')+'. Si no aparece en Archivos, mantén pulsado el enlace de descarga del navegador.';
+   stream.getTracks().forEach(track=>track.stop());setTimeout(()=>URL.revokeObjectURL(url),60000);
+  };
+  recorder.start(250);statusEl.textContent='Grabando 9 segundos… no cambies de pestaña.';
+  const begin=performance.now();playing=true;startTime=begin;
+  function recTick(now){if(!playing)return;const elapsed=now-begin;renderAt(elapsed);if(elapsed>=9000){playing=false;recorder.stop();return}raf=requestAnimationFrame(recTick)}
+  raf=requestAnimationFrame(recTick);
+ }catch(err){statusEl.textContent='No se pudo iniciar la exportación en este navegador: '+err.message}
+});
+build();
+</script>
+</body>
+</html>
