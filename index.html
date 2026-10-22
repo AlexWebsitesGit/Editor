@@ -1,121 +1,261 @@
-<!doctype html>
-<html lang="es">
+
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>MiniStory Code Studio</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Story Studio</title>
 <style>
-:root{color-scheme:dark;--bg:#0b1020;--panel:#131b30;--line:#293653;--text:#f3f6ff;--muted:#a7b3cc;--accent:#8b9cff}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#182342 0,#0b1020 55%);font-family:system-ui,-apple-system,sans-serif;color:var(--text);padding:18px;max-width:900px;margin:auto}
-h1{font-size:clamp(25px,5vw,38px);margin:8px 0}p{color:var(--muted);line-height:1.5}.tag{display:inline-block;border:1px solid #39476a;border-radius:999px;padding:5px 10px;color:#c8d1ff;font-size:12px}
-.panel{background:#131b30;border:1px solid var(--line);border-radius:18px;padding:16px;margin:14px 0}
-label{display:block;font-weight:650;margin-bottom:8px}textarea{width:100%;min-height:82px;resize:vertical;background:#0b1224;border:1px solid #354463;color:white;border-radius:12px;padding:12px;font:inherit}
-button{border:0;border-radius:12px;padding:12px 15px;font:600 15px system-ui;cursor:pointer;background:#8b9cff;color:#0b1020}
-button.secondary{background:#25324f;color:#f3f6ff;border:1px solid #3b4a6c}button:disabled{opacity:.5;cursor:wait}.buttons{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}
-canvas{display:block;width:100%;height:auto;aspect-ratio:16/9;background:#10182b;border-radius:14px;border:1px solid #354463}
-.status{font-size:13px;color:#b9c6e2;min-height:22px;margin-top:10px}.small{font-size:12px}.scene-list{display:flex;gap:8px;flex-wrap:wrap}.scene{background:#202c47;border-radius:9px;padding:8px 10px;font-size:12px;color:#dce3ff}
-a{color:#bfcaff}footer{font-size:12px;color:#91a0be;line-height:1.5}
+*{box-sizing:border-box}
+body{margin:0;background:#090d18;color:#edf2ff;font-family:system-ui,sans-serif}
+main{max-width:1050px;margin:auto;padding:24px 16px}
+h1{margin:0 0 6px;font-size:34px}
+p{color:#aab7cf}
+.layout{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.panel{background:#121a2b;border:1px solid #2a3851;border-radius:16px;padding:16px;min-width:0}
+textarea{width:100%;min-height:100px;background:#080f1e;color:white;border:1px solid #35435c;border-radius:10px;padding:12px;font:inherit}
+button{background:#25334b;color:white;border:0;border-radius:9px;padding:11px 13px;margin:8px 5px 8px 0;font-weight:bold;cursor:pointer}
+.primary{background:#7547e8}
+canvas{width:100%;height:auto;display:block;border-radius:10px;background:#080d18}
+#status{font-size:13px;min-height:22px}
+.scene{background:#0b1220;padding:10px;border-radius:9px;margin:8px 0}
+.scene strong{display:block}
+.scene span{font-size:13px;color:#aab7cf}
+@media(max-width:700px){.layout{grid-template-columns:1fr}h1{font-size:29px}}
 </style>
 </head>
 <body>
-<span class="tag">PROTOTIPO · 2D · BETA</span>
-<h1>MiniStory Code Studio</h1>
-<p>Escribe una idea, genera una minihistoria animada y grábala como vídeo desde el navegador. Esta primera versión usa una historia de demostración y todavía no conecta una IA externa.</p>
-<div class="panel">
-<label for="idea">¿Qué historia quieres contar?</label>
-<textarea id="idea" maxlength="180" placeholder="Ej.: Un pequeño robot encuentra una semilla y hace crecer un árbol.">Un pequeño robot encuentra una semilla y hace crecer un árbol.</textarea>
-<div class="buttons">
-<button id="generate">Crear escenas</button>
-<button class="secondary" id="play">Reproducir</button>
-<button class="secondary" id="record">Exportar vídeo</button>
+<main>
+<h1>Story Studio <span style="color:#a78bfa">2D</span></h1>
+<p>Turn your idea into a short illustrated story.</p>
+
+<div class="layout">
+<section class="panel">
+<label for="idea">Your story idea</label>
+<textarea id="idea">A tiny astronaut discovers a glowing flower on Mars.</textarea>
+<div>
+<button class="primary" id="create">✦ Create scenes</button>
+<button id="play">▶ Play</button>
+<button id="export">↓ Export video</button>
 </div>
-<div class="status" id="status" role="status">Listo. Pulsa “Crear escenas”.</div>
-<div class="scene-list" id="sceneList"></div>
+<div id="status">Enter an idea and create your story.</div>
+<canvas id="canvas" width="960" height="540"></canvas>
+<p id="narration">Your story narration will appear here.</p>
+</section>
+
+<section class="panel">
+<h2>Story scenes</h2>
+<div id="sceneList"><div class="scene">Your generated scenes will appear here.</div></div>
+</section>
 </div>
-<div class="panel">
-<canvas id="screen" width="960" height="540" aria-label="Vista previa de la animación"></canvas>
-<p class="small">Formato de vista previa: 16:9. La exportación graba la animación en tiempo real; mantén esta pestaña abierta mientras termina.</p>
-</div>
-<div class="panel">
-<strong>Qué incluye esta versión</strong>
-<p>✓ Animación dibujada por código · ✓ Tres escenas · ✓ Texto adaptado a tu idea · ✓ Grabación del lienzo si el navegador lo admite.</p>
-<p>Para convertir cualquier idea en dibujos realmente distintos, el siguiente paso es conectar un modelo de IA que escriba una descripción estructurada de cada escena. No pegues claves secretas de API en este archivo público.</p>
-</div>
-<footer>Consejo para iPad: abre este archivo desde una web HTTPS para probar la grabación. El navegador decide qué formato puede exportar (MP4 o WebM); si MP4 no está disponible, la aplicación te lo indicará.</footer>
+<p style="font-size:12px">Your API key stays on the server. Video format depends on browser support.</p>
+</main>
+
 <script>
-const canvas=document.getElementById('screen'),ctx=canvas.getContext('2d');
-const idea=document.getElementById('idea'),statusEl=document.getElementById('status'),sceneList=document.getElementById('sceneList');
-const W=canvas.width,H=canvas.height;
-let playing=false,raf=0,startTime=0,storyText='Un pequeño robot encuentra una semilla y hace crecer un árbol.';
-const sceneNames=['El descubrimiento','La idea cobra vida','Un nuevo comienzo'];
-function rounded(x,y,w,h,r,fill){ctx.fillStyle=fill;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill()}
-function text(str,x,y,size,color='#fff',align='center',weight='600'){ctx.fillStyle=color;ctx.font=`${weight} ${size}px system-ui, sans-serif`;ctx.textAlign=align;ctx.fillText(str,x,y)}
-function wrap(str,maxChars){let words=str.split(/\s+/),lines=[],line='';for(const word of words){if((line+' '+word).trim().length>maxChars&&line){lines.push(line);line=word}else line=(line+' '+word).trim()}if(line)lines.push(line);return lines.slice(0,2)}
-function drawScene(scene,t){
- const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,scene===2?'#132b3a':'#101b38');g.addColorStop(1,scene===2?'#315b4d':'#503e70');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
- // Stars / soft dots
- for(let i=0;i<55;i++){let x=(i*173+35)%W,y=(i*89+22)%300;ctx.globalAlpha=.18+(i%4)*.1;ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x,y,1.5+(i%3),0,Math.PI*2);ctx.fill()}ctx.globalAlpha=1;
- // ground
- ctx.fillStyle=scene===2?'#244b3e':'#252c4b';ctx.beginPath();ctx.ellipse(480,490,500,105,0,0,Math.PI*2);ctx.fill();
- // scene progress animation
- const bob=Math.sin(t*3)*5;
- if(scene===0){
-   // small robot
-   rounded(300,285+bob,145,140,24,'#9daeff');rounded(320,310+bob,105,72,15,'#eaf0ff');
-   ctx.fillStyle='#18233f';ctx.beginPath();ctx.arc(350,340+bob,9,0,Math.PI*2);ctx.arc(395,340+bob,9,0,Math.PI*2);ctx.fill();
-   ctx.strokeStyle='#d8e0ff';ctx.lineWidth=8;ctx.beginPath();ctx.moveTo(370,285+bob);ctx.lineTo(370,260+bob);ctx.stroke();ctx.fillStyle='#ffdb7b';ctx.beginPath();ctx.arc(370,253+bob,12,0,Math.PI*2);ctx.fill();
-   // seed
-   const sx=560,sy=430-Math.min(1,t/2)*50;ctx.fillStyle='#d8a56b';ctx.beginPath();ctx.ellipse(sx,sy,12,18,.5,0,Math.PI*2);ctx.fill();
-   text('¿QUÉ ES ESO?',480,205,28,'#fff');
- }else if(scene===1){
-   // sprout emerging
-   rounded(300,285+bob,145,140,24,'#9daeff');rounded(320,310+bob,105,72,15,'#eaf0ff');ctx.fillStyle='#18233f';ctx.beginPath();ctx.arc(350,340+bob,9,0,Math.PI*2);ctx.arc(395,340+bob,9,0,Math.PI*2);ctx.fill();
-   ctx.strokeStyle='#75db9a';ctx.lineWidth=12;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(560,455);ctx.lineTo(560,370-Math.min(1,t/2)*30);ctx.stroke();
-   ctx.fillStyle='#64d68c';ctx.beginPath();ctx.ellipse(535,385,27,13,-.5,0,Math.PI*2);ctx.ellipse(583,365,27,13,.5,0,Math.PI*2);ctx.fill();
-   text('UNA PEQUEÑA SEMILLA',480,205,26,'#fff');
- }else{
-   // tree
-   ctx.strokeStyle='#b77b55';ctx.lineWidth=30;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(560,470);ctx.lineTo(560,325);ctx.stroke();
-   ctx.lineWidth=17;ctx.beginPath();ctx.moveTo(560,380);ctx.lineTo(510,330);ctx.moveTo(560,365);ctx.lineTo(610,315);ctx.stroke();
-   for(const [x,y,r] of [[530,300,55],[585,285,63],[485,335,39],[625,340,43],[560,245,49]]){ctx.fillStyle='#48b978';ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()}
-   rounded(300,285+bob,145,140,24,'#9daeff');rounded(320,310+bob,105,72,15,'#eaf0ff');ctx.fillStyle='#18233f';ctx.beginPath();ctx.arc(350,340+bob,9,0,Math.PI*2);ctx.arc(395,340+bob,9,0,Math.PI*2);ctx.fill();
-   text('TODO EMPIEZA CON ALGO PEQUEÑO',480,175,24,'#fff');
- }
- // captions
- rounded(45,35,870,92,18,'rgba(7,12,28,.72)');
- const lines=wrap(storyText,65);text('MINIHISTORIA · ESCENA '+(scene+1),75,65,16,'#aebdff','left','700');
- lines.forEach((line,i)=>text(line,75,95+i*25,21,'#fff','left','600'));
- rounded(45,500,870,5,3,'rgba(255,255,255,.18)');rounded(45,500,870*((scene+t/4)/3),5,3,'#aebdff');
+const API="https://editor-eight-ruby.vercel.app/api/generate";
+const canvas=document.querySelector("#canvas");
+const ctx=canvas.getContext("2d");
+const idea=document.querySelector("#idea");
+const status=document.querySelector("#status");
+const narration=document.querySelector("#narration");
+const sceneList=document.querySelector("#sceneList");
+const createBtn=document.querySelector("#create");
+let scenes=[],title="My Story",playing=false,animation=null;
+
+const palettes={
+ space:["#080d2a","#28356e"],forest:["#10392b","#31734a"],
+ ocean:["#06304b","#0e849b"],city:["#17213c","#586c8b"],
+ desert:["#7c4037","#e4a66b"],castle:["#251b43","#75619b"],
+ home:["#252b47","#707c9b"],nature:["#153c31","#58a46b"]
+};
+
+function classify(s,i){
+ const text=(s.narration+" "+s.visualDescription).toLowerCase();
+ let setting=/space|mars|astronaut|planet|galaxy|rocket|alien|moon/.test(text)?"space":
+ /ocean|underwater|sea|fish|whale|submarine|beach/.test(text)?"ocean":
+ /city|street|building|robot|town/.test(text)?"city":
+ /desert|sand|cactus|pyramid/.test(text)?"desert":
+ /castle|dragon|kingdom|wizard|knight|magic/.test(text)?"castle":
+ /house|bedroom|home|room/.test(text)?"home":
+ /forest|tree|woods|jungle/.test(text)?"forest":"nature";
+ let character=/astronaut/.test(text)?"astronaut":
+ /dragon/.test(text)?"dragon":
+ /robot/.test(text)?"robot":
+ /cat|dog|fox|rabbit|bear|animal/.test(text)?"animal":
+ /alien/.test(text)?"alien":"person";
+ let object=/flower|plant|seed|sprout|tree/.test(text)?"plant":
+ /treasure|gold|chest/.test(text)?"treasure":
+ /book|map|letter/.test(text)?"book":"glow";
+ return {...s,setting,character,object};
 }
-function renderAt(ms){const total=9000,sec=(ms%total)/1000,scene=Math.min(2,Math.floor(sec/3)),local=sec%3;drawScene(scene,local)}
-function stop(){playing=false;cancelAnimationFrame(raf)}
-function tick(now){if(!playing)return;renderAt(now-startTime);raf=requestAnimationFrame(tick)}
-function start(){stop();playing=true;startTime=performance.now();raf=requestAnimationFrame(tick)}
-function build(){storyText=(idea.value.trim()||'Una pequeña aventura empieza hoy.').replace(/[<>]/g,'');sceneList.innerHTML='';sceneNames.forEach((n,i)=>{const el=document.createElement('span');el.className='scene';el.textContent=`${i+1}. ${n}`;sceneList.appendChild(el)});drawScene(0,0);statusEl.textContent='Escenas preparadas. Reproduce la vista previa o exporta el vídeo.'}
-document.getElementById('generate').addEventListener('click',build);
-document.getElementById('play').addEventListener('click',()=>{build();start();statusEl.textContent='Reproduciendo la minihistoria (9 segundos).';setTimeout(()=>{stop();drawScene(2,2);statusEl.textContent='Reproducción terminada.'},9000)});
-document.getElementById('record').addEventListener('click',async()=>{
- stop();build();
- if(!canvas.captureStream||!window.MediaRecorder){statusEl.textContent='Este navegador no permite grabar el lienzo. Prueba Safari actualizado o un navegador compatible.';return}
- let mime='';for(const type of ['video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm']){try{if(MediaRecorder.isTypeSupported(type)){mime=type;break}}catch(e){}}
- if(!mime){statusEl.textContent='No se detecta un formato de vídeo compatible en este navegador.';return}
+
+function circle(x,y,r,color){
+ ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);
+ ctx.fillStyle=color;ctx.fill();
+}
+function rounded(x,y,w,h,r,color){
+ ctx.beginPath();ctx.roundRect(x,y,w,h,r);
+ ctx.fillStyle=color;ctx.fill();
+}
+function drawCharacter(type,x,y,t){
+ ctx.save();ctx.translate(x,y+Math.sin(t*3)*5);
+ if(type==="robot"){
+  rounded(-32,-75,64,65,12,"#94a3b8");
+  circle(-12,-50,6,"#22d3ee");circle(12,-50,6,"#22d3ee");
+  rounded(-22,-5,44,43,8,"#64748b");
+  ctx.strokeStyle="#cbd5e1";ctx.lineWidth=8;
+  ctx.beginPath();ctx.moveTo(-20,8,-40,28);ctx.moveTo(20,8,40,28);
+  ctx.moveTo(-10,38,-15,55);ctx.moveTo(10,38,15,55);ctx.stroke();
+ }else if(type==="astronaut"){
+  rounded(-28,-67,56,95,18,"#e2e8f0");
+  circle(0,-47,22,"#172554");circle(-7,-50,5,"#67e8f9");
+  rounded(-22,12,44,24,6,"#cbd5e1");
+  ctx.strokeStyle="#e2e8f0";ctx.lineWidth=9;
+  ctx.beginPath();ctx.moveTo(-22,-10,-40,15);ctx.moveTo(22,-10,40,15);
+  ctx.moveTo(-10,35,-15,52);ctx.moveTo(10,35,15,52);ctx.stroke();
+ }else if(type==="dragon"){
+  circle(0,-45,29,"#a78bfa");circle(-10,-50,4,"#fef08a");
+  circle(10,-50,4,"#fef08a");rounded(-30,-20,60,50,20,"#8b5cf6");
+ }else if(type==="animal"){
+  circle(0,-38,30,"#d6a56f");circle(-19,-61,12,"#d6a56f");
+  circle(19,-61,12,"#d6a56f");circle(-10,-42,4,"#172033");
+  circle(10,-42,4,"#172033");circle(0,-30,5,"#7c2d12");
+ }else if(type==="alien"){
+  circle(0,-48,31,"#4ade80");circle(-11,-52,8,"#172033");
+  circle(11,-52,8,"#172033");rounded(-23,-18,46,44,16,"#22c55e");
+ }else{
+  circle(0,-57,23,"#f4c7a1");rounded(-26,-32,52,58,12,"#38bdf8");
+  circle(-8,-60,3,"#172033");circle(8,-60,3,"#172033");
+ }
+ ctx.restore();
+}
+function drawObject(type,x,y,t){
+ ctx.save();ctx.translate(x,y+Math.sin(t*2)*6);
+ if(type==="plant"){
+  ctx.strokeStyle="#4ade80";ctx.lineWidth=7;ctx.beginPath();
+  ctx.moveTo(0,20,0,-20);ctx.stroke();
+  ctx.fillStyle="#4ade80";ctx.beginPath();
+  ctx.ellipse(-12,-8,15,7,-.5,0,7);ctx.ellipse(12,-16,15,7,.5,0,7);ctx.fill();
+  for(let i=0;i<5;i++){let a=i*Math.PI*2/5;circle(Math.cos(a)*12,-28+Math.sin(a)*12,8,"#fb7185")}
+  circle(0,-28,5,"#fde68a");
+ }else if(type==="treasure"){
+  rounded(-38,-22,76,45,7,"#b45309");rounded(-38,-28,76,16,5,"#f59e0b");rounded(-5,-15,10,17,3,"#fef3c7");
+ }else if(type==="book"){
+  rounded(-33,-25,66,50,5,"#be123c");rounded(-2,-22,4,44,1,"#fecdd3");
+ }else{
+  circle(0,0,27,"#fef08a");circle(0,0,16,"#fde047");
+  for(let i=0;i<8;i++){let a=i*Math.PI/4;circle(Math.cos(a)*38,Math.sin(a)*38,4,"#67e8f9")}
+ }
+ ctx.restore();
+}
+function draw(index,t=0){
+ if(!scenes.length)return;
+ const s=scenes[index],p=palettes[s.setting]||palettes.nature;
+ const g=ctx.createLinearGradient(0,0,0,540);
+ g.addColorStop(0,p[0]);g.addColorStop(1,p[1]);
+ ctx.fillStyle=g;ctx.fillRect(0,0,960,540);
+ if(s.setting==="space"){
+  for(let i=0;i<65;i++)circle((i*137)%960,(i*71)%400,2,"#fff");
+  circle(810,105,48,"#c4b5fd");
+ }else if(s.setting==="ocean"){
+  for(let i=0;i<6;i++)circle((i*180+t*25)%960,390+i%3*30,8,"#67e8f9");
+ }else{
+  circle(820,85,38,"#fde68a");
+  if(s.setting==="forest"||s.setting==="nature"){
+   for(let i=0;i<7;i++){ctx.fillStyle="#604632";ctx.fillRect(i*150+20,280,18,200);circle(i*150+29,260,48,"#166534")}
+  }else if(s.setting==="city"){
+   for(let i=0;i<9;i++){ctx.fillStyle="#475569";ctx.fillRect(i*110,220+(i%3)*25,75,250);for(let j=0;j<4;j++)ctx.fillRect(i*110+14,240+(i%3)*25+j*35,10,13)}
+  }else if(s.setting==="castle"){
+   ctx.fillStyle="#6d5b91";ctx.fillRect(650,220,190,240);
+   ctx.fillRect(620,180,55,280);ctx.fillRect(810,180,55,280);
+  }else if(s.setting==="desert"){
+   ctx.fillStyle="#d97706";ctx.beginPath();ctx.ellipse(180,460,300,90,0,0,7);ctx.fill();
+  }else if(s.setting==="home"){
+   ctx.fillStyle="#8b5e4a";ctx.fillRect(650,240,180,220);
+   ctx.fillStyle="#c084fc";ctx.beginPath();ctx.moveTo(620,245,740,150,860,245);ctx.fill();
+  }
+ }
+ drawCharacter(s.character,300+Math.sin(t)*15,390,t);
+ drawObject(s.object,620,370,t);
+ rounded(22,20,500,65,12,"#050816cc");
+ ctx.fillStyle="#fff";ctx.font="bold 25px system-ui";ctx.fillText(title.slice(0,32),40,59);
+ rounded(25,470,910,48,10,"#050816dd");
+ ctx.fillStyle="#fff";ctx.font="18px system-ui";
+ let line=s.narration||s.visualDescription||"The adventure continues.";
+ ctx.fillText(line.length>100?line.slice(0,97)+"...":line,42,500);
+ narration.textContent=s.narration||s.visualDescription||"";
+}
+function showScenes(){
+ sceneList.replaceChildren();
+ scenes.forEach((s,i)=>{
+  const card=document.createElement("div");card.className="scene";
+  const strong=document.createElement("strong");strong.textContent=`Scene ${i+1}`;
+  const span=document.createElement("span");span.textContent=s.narration||s.visualDescription||"Story scene";
+  card.append(strong,span);sceneList.append(card);
+ });
+}
+document.querySelector("#create").addEventListener("click",async()=>{
+ if(!idea.value.trim()){status.textContent="Enter a story idea first.";return}
+ createBtn.disabled=true;status.textContent="Generating your story...";
  try{
-  const stream=canvas.captureStream(30),chunks=[],recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:4000000});
-  recorder.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
-  recorder.onerror=()=>{statusEl.textContent='Error al grabar. Prueba otra vez o utiliza un navegador actualizado.'};
-  recorder.onstop=()=>{
-   const blob=new Blob(chunks,{type:mime}),url=URL.createObjectURL(blob),a=document.createElement('a');
-   a.href=url;a.download='minihistoria.'+(mime.includes('mp4')?'mp4':'webm');document.body.appendChild(a);a.click();a.remove();
-   statusEl.textContent='Vídeo listo. Formato exportado: '+(mime.includes('mp4')?'MP4':'WebM')+'. Si no aparece en Archivos, mantén pulsado el enlace de descarga del navegador.';
-   stream.getTracks().forEach(track=>track.stop());setTimeout(()=>URL.revokeObjectURL(url),60000);
-  };
-  recorder.start(250);statusEl.textContent='Grabando 9 segundos… no cambies de pestaña.';
-  const begin=performance.now();playing=true;startTime=begin;
-  function recTick(now){if(!playing)return;const elapsed=now-begin;renderAt(elapsed);if(elapsed>=9000){playing=false;recorder.stop();return}raf=requestAnimationFrame(recTick)}
-  raf=requestAnimationFrame(recTick);
- }catch(err){statusEl.textContent='No se pudo iniciar la exportación en este navegador: '+err.message}
+  const response=await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt:idea.value.trim()})});
+  const data=await response.json();
+  if(!response.ok)throw new Error(data.error||"API request failed");
+  if(!data.story||!Array.isArray(data.story.scenes))throw new Error("Unexpected story format");
+  title=data.story.title||"My Story";
+  scenes=data.story.scenes.slice(0,6).map(classify);
+  if(!scenes.length)throw new Error("No scenes were returned");
+  showScenes();draw(0);status.textContent=`Created ${scenes.length} scenes!`;
+ }catch(e){status.textContent="Error: "+e.message+" Check the Vercel API key and deployment."}
+ finally{createBtn.disabled=false}
 });
-build();
+document.querySelector("#play").addEventListener("click",()=>{
+ if(!scenes.length){status.textContent="Create scenes first.";return}
+ if(animation)cancelAnimationFrame(animation);
+ playing=true;let start=null;
+ function frame(now){
+  if(!playing)return;if(start===null)start=now;
+  const elapsed=(now-start)/1000;
+  if(elapsed>=9){playing=false;draw(scenes.length-1,0);status.textContent="Playback finished.";return}
+  const i=Math.min(scenes.length-1,Math.floor(elapsed/9*scenes.length));
+  draw(i,elapsed);animation=requestAnimationFrame(frame);
+ }
+ animation=requestAnimationFrame(frame);status.textContent="Playing...";
+});
+document.querySelector("#export").addEventListener("click",()=>{
+ if(!scenes.length){status.textContent="Create scenes first.";return}
+ if(!canvas.captureStream||!window.MediaRecorder){status.textContent="Video export is not supported in this browser.";return}
+ const type=MediaRecorder.isTypeSupported("video/mp4")?"video/mp4":"video/webm";
+ if(!MediaRecorder.isTypeSupported(type)){status.textContent="No supported video format.";return}
+ const stream=canvas.captureStream(30),chunks=[];
+ let recorder;
+ try{recorder=new MediaRecorder(stream,{mimeType:type})}
+ catch(e){stream.getTracks().forEach(t=>t.stop());status.textContent="Could not start recording.";return}
+ recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+ recorder.onstop=()=>{
+  const url=URL.createObjectURL(new Blob(chunks,{type}));
+  const a=document.createElement("a");a.href=url;
+  a.download=(title.replace(/[^a-z0-9]+/gi,"-")||"story")+"."+(type==="video/mp4"?"mp4":"webm");
+  a.click();URL.revokeObjectURL(url);stream.getTracks().forEach(t=>t.stop());
+  status.textContent="Video exported.";
+ };
+ let start=null;
+ recorder.start();
+ function frame(now){
+  if(start===null)start=now;
+  const elapsed=(now-start)/1000;
+  if(elapsed>=9){draw(scenes.length-1,elapsed);recorder.stop();return}
+  const i=Math.min(scenes.length-1,Math.floor(elapsed/9*scenes.length));
+  draw(i,elapsed);requestAnimationFrame(frame);
+ }
+ requestAnimationFrame(frame);status.textContent="Recording video...";
+});
+scenes=[
+ classify({narration:"A curious hero begins a new adventure.",visualDescription:"A robot explores a forest and finds a glowing star."},0),
+ classify({narration:"The discovery changes everything.",visualDescription:"The robot discovers a magical plant in the forest."},1),
+ classify({narration:"A new beginning brings hope.",visualDescription:"The robot celebrates a glowing flower in nature."},2)
+];
+draw(0);showScenes();
 </script>
 </body>
 </html>
